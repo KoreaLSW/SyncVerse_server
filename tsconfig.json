@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    /* 기본 설정 */
+    "target": "es2016",
+    "module": "commonjs" /* 중요: Node.js 표준 방식 */,
+    "moduleResolution": "node" /* 중요: 모듈 찾는 방식 */,
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* 호환성 및 엄격함 설정 */
+    "esModuleInterop": true /* import/require 호환성 켜기 */,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+
+    /* 🚨 에러 원인 제거 (이 옵션을 false로 하거나 지우세요) */
+    "verbatimModuleSyntax": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
