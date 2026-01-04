@@ -22,7 +22,7 @@ interface AuthenticationResult {
 export const createHocuspocusServer = (): HocuspocusServer => {
   return new HocuspocusServer({
     name: "SyncVerse Server",
-    extensions: [new Logger()],
+    //extensions: [new Logger()],
 
     async onAuthenticate({
       token,
