@@ -6,7 +6,12 @@ import type {
   onConnectPayload,
   onDisconnectPayload,
 } from "@hocuspocus/server";
-import { Logger } from "@hocuspocus/extension-logger";
+import * as Y from "yjs";
+import {
+  canUseWhiteboardPersistence,
+  loadWhiteboardDocument,
+  saveWhiteboardDocument,
+} from "./whiteboardPersistence";
 
 // 인증 결과 타입
 interface AuthenticationResult {
@@ -20,6 +25,9 @@ interface AuthenticationResult {
 
 // Hocuspocus 서버 생성
 export const createHocuspocusServer = (): HocuspocusServer => {
+  const shouldPersistDocument = (documentName: string) =>
+    documentName.startsWith("whiteboard-");
+
   return new HocuspocusServer({
     name: "SyncVerse Server",
     //extensions: [new Logger()],
@@ -49,19 +57,45 @@ export const createHocuspocusServer = (): HocuspocusServer => {
       documentName,
     }: onStoreDocumentPayload): Promise<void> {
       console.log(`💾 채널 문서 저장 중: ${documentName}`);
-      // 데이터베이스 저장 로직
-      // await saveToDatabase(documentName, document);
+      if (!shouldPersistDocument(documentName)) return;
+
+      if (!canUseWhiteboardPersistence()) {
+        console.warn(
+          "⚠️ Supabase 환경변수가 없어 화이트보드 문서 영속화를 건너뜁니다.",
+        );
+        return;
+      }
+
+      try {
+        await saveWhiteboardDocument(documentName, document as Y.Doc);
+      } catch (error) {
+        console.error(`❌ 문서 저장 실패: ${documentName}`, error);
+      }
     },
 
     async onLoadDocument({
       documentName,
+      document,
     }: onLoadDocumentPayload): Promise<void> {
       console.log(`📂 채널 문서 로드 중: ${documentName}`);
-      // 데이터베이스 로드 로직
-      // const savedDoc = await loadFromDatabase(documentName);
-      // if (savedDoc) {
-      //   Y.applyUpdate(document, savedDoc);
-      // }
+      if (!shouldPersistDocument(documentName)) return;
+
+      if (!canUseWhiteboardPersistence()) {
+        console.warn(
+          "⚠️ Supabase 환경변수가 없어 화이트보드 문서 복원을 건너뜁니다.",
+        );
+        return;
+      }
+
+      try {
+        const savedState = await loadWhiteboardDocument(documentName);
+        if (savedState) {
+          Y.applyUpdate(document as Y.Doc, savedState);
+          console.log(`✅ 문서 복원 완료: ${documentName}`);
+        }
+      } catch (error) {
+        console.error(`❌ 문서 로드 실패: ${documentName}`, error);
+      }
     },
 
     async onConnect({ documentName }: onConnectPayload): Promise<void> {
@@ -81,7 +115,7 @@ export const createHocuspocusServer = (): HocuspocusServer => {
       console.log(
         `👋 클라이언트가 채널에서 연결 해제됨: ${documentName} (socketId=${socketId}, userId=${
           userId ?? "unknown"
-        })`
+        })`,
       );
 
       if (!userId) return;
